@@ -1,0 +1,10 @@
+--- ./example/base.py
++++ ./example/prepend-more1.py
+@@ -1,5 +1,7 @@
+ def foo(i: int) -> str:
+     return f"foo{i}"
+ 
++print("unrelated change")
++print("unrelated change")
+ 
+ foo("wrong value")

@@ -1,0 +1,10 @@
+--- ./example/base.py
++++ ./example/removed.py
+@@ -2,4 +2,6 @@
+     return f"foo{i}"
+ 
+ 
+-foo("wrong value")
++print("unrelated change 1")
++print(foo("wrong value"))
++print("unrelated change 2")

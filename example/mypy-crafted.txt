@@ -1,0 +1,2 @@
+report_new_linter_errors.py:
+Found 1 error in 1 file (checked 1 source file)

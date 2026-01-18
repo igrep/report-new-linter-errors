@@ -1,0 +1,9 @@
+--- ./example/base.py
++++ ./example/prepend-append.py
+@@ -2,4 +2,6 @@
+     return f"foo{i}"
+ 
+ 
++print("unrelated change 1")
+ foo("wrong value")
++print("unrelated change 2")

@@ -1,0 +1,8 @@
+--- ./example/base.py
++++ ./example/delete-previous.py
+@@ -1,5 +1,4 @@
+ def foo(i: int) -> str:
+     return f"foo{i}"
+ 
+-
+ foo("wrong value")

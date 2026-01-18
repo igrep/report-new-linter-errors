@@ -1,0 +1,2 @@
+example/base.py:5: error: Argument 1 to "foo" has incompatible type "str"; expected "int"  [arg-type]
+Found 1 error in 1 file (checked 1 source file)
