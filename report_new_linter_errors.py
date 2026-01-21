@@ -3,6 +3,7 @@
 """
 $ report-new-linter-errors <command> [args...]
 """
+
 import os
 import re
 import shutil
@@ -11,8 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from itertools import accumulate
 from pathlib import PurePath
-from typing import Protocol, TextIO, Any, cast, Iterator, Literal, Optional, \
-    Union
+from typing import Protocol, TextIO, Any, cast, Iterator, Literal, Optional, Union
 
 
 # https://stackoverflow.com/questions/1101957/are-there-any-standard-exit-status-codes-in-linux
@@ -20,25 +20,20 @@ EXIT_CODE_NO_SNAPSHOT_FILE = 66
 
 
 class Environ(Protocol):
-    def get(self, key: str, default: str) -> str:
-        ...
+    def get(self, key: str, default: str) -> str: ...
 
 
 class Sys(Protocol):
-    def exit(self, status: int) -> None:
-        ...
+    def exit(self, status: int) -> None: ...
 
     @property
-    def argv(self) -> list[str]:
-        ...
+    def argv(self) -> list[str]: ...
 
     @property
-    def stdout(self) -> TextIO:
-        ...
+    def stdout(self) -> TextIO: ...
 
     @property
-    def stderr(self) -> TextIO:
-        ...
+    def stderr(self) -> TextIO: ...
 
 
 def main(environ: Environ, sys: Sys) -> None:
@@ -47,11 +42,14 @@ def main(environ: Environ, sys: Sys) -> None:
     snapshot_path = snapshot_dir.get_snapshot_path()
 
     linter_command = sys.argv[1:]
-    with subprocess.Popen(linter_command, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE,
-                          text=True, ) as linter_proc:
+    with subprocess.Popen(
+        linter_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ) as linter_proc:
         new_snapshot_path = snapshot_dir.get_new_snapshot_path()
-        with open(new_snapshot_path, 'w') as f:
+        with open(new_snapshot_path, "w") as f:
             while True:
                 chunk = linter_proc.stdout.read(4096)
                 if not chunk:
@@ -59,15 +57,15 @@ def main(environ: Environ, sys: Sys) -> None:
                 f.write(chunk)
                 sys.stdout.write(chunk)
 
-    diff_command = environ.get('REPORT_NEW_LINTER_ERROR_DIFF', 'diff')
+    diff_command = environ.get("REPORT_NEW_LINTER_ERROR_DIFF", "diff")
     if not os.path.exists(snapshot_path):
         print(
-            'Snapshot file not found. Creating a new snapshot file.',
+            "Snapshot file not found. Creating a new snapshot file.",
             file=cast(Any, sys.stderr),
         )
         shutil.copy(new_snapshot_path, snapshot_path)
         print(
-            'Run this command later again to check if new errors are introduced.',
+            "Run this command later again to check if new errors are introduced.",
             file=cast(Any, sys.stderr),
         )
         sys.exit(EXIT_CODE_NO_SNAPSHOT_FILE)
@@ -76,9 +74,9 @@ def main(environ: Environ, sys: Sys) -> None:
     save_current_commit(environ, snapshot_dir)
 
     with subprocess.Popen(
-            [diff_command, '-u', snapshot_path, new_snapshot_path],
-            stdout=subprocess.PIPE,
-            text=True,
+        [diff_command, "-u", snapshot_path, new_snapshot_path],
+        stdout=subprocess.PIPE,
+        text=True,
     ) as diff_proc:
         # Skip header lines
         diff_proc.stdout.readline()
@@ -87,36 +85,37 @@ def main(environ: Environ, sys: Sys) -> None:
         new_errors_found = False
         some_errors_removed = False
         while True:
-            l = diff_proc.stdout.readline().rstrip('\n')
+            l = diff_proc.stdout.readline().rstrip("\n")
             if not l:
                 break
 
-            if l.startswith('+'):
+            if l.startswith("+"):
                 sys.stderr.write(f"{l[1:]}\n")
                 new_errors_found = True
                 continue
 
-            if l.startswith('-'):
+            if l.startswith("-"):
                 some_errors_removed = True
                 continue
 
         if new_errors_found:
             print(
-                'ERROR: diff command reported that the command may have produced new errors. Fix it or update the snapshot.',
+                "ERROR: diff command reported that the command may have produced new errors. Fix it or update the snapshot.",
                 file=cast(Any, sys.stderr),
             )
             if some_errors_removed:
                 print(
-                    'Thank you! It looks like that you fixed some errors. But you also introduced new errors. Fix it!',
+                    "Thank you! It looks like that you fixed some errors. But you also introduced new errors. Fix it!",
                     file=cast(Any, sys.stdout),
                 )
             sys.exit(1)
 
         if some_errors_removed:
             print(
-                'Congratulations! It looks like that you fixed some errors.',
-                file=cast(Any, sys.stdout))
-            print('Saving the new snapshot.', file=cast(Any, sys.stdout))
+                "Congratulations! It looks like that you fixed some errors.",
+                file=cast(Any, sys.stdout),
+            )
+            print("Saving the new snapshot.", file=cast(Any, sys.stdout))
             shutil.copy(new_snapshot_path, snapshot_path)
 
 
@@ -125,62 +124,63 @@ class SnapshotDirectory:
         self.root = root
 
     @classmethod
-    def from_environ(cls, environ: Environ) -> 'SnapshotDirectory':
+    def from_environ(cls, environ: Environ) -> "SnapshotDirectory":
         root = environ.get(
-            'REPORT_NEW_LINTER_ERROR_PATH',
-            os.path.join(os.getcwd(), '.report-new-linter-error'),
+            "REPORT_NEW_LINTER_ERROR_PATH",
+            os.path.join(os.getcwd(), ".report-new-linter-error"),
         )
         if not os.path.exists(root):
             os.makedirs(root)
         return cls(root)
 
     def get_snapshot_path(self) -> str:
-        return os.path.join(self.root, 'snapshot')
+        return os.path.join(self.root, "snapshot")
 
     def get_new_snapshot_path(self) -> str:
-        return os.path.join(self.root, 'new-snapshot')
+        return os.path.join(self.root, "new-snapshot")
 
     def get_current_commit(self) -> Optional[str]:
-        commit_path = os.path.join(self.root, 'commit')
+        commit_path = os.path.join(self.root, "commit")
         if not os.path.exists(commit_path):
             return None
-        with open(commit_path, 'r') as f:
+        with open(commit_path, "r") as f:
             return f.read().strip()
 
     def save_current_commit(self, commit: str) -> None:
-        commit_path = os.path.join(self.root, 'commit')
-        with open(commit_path, 'w') as f:
+        commit_path = os.path.join(self.root, "commit")
+        with open(commit_path, "w") as f:
             f.write(commit)
 
+
 def adjust_line_numbers_in_snapshot(
-        environ: Environ,
-        snapshot_dir: SnapshotDirectory,
+    environ: Environ,
+    snapshot_dir: SnapshotDirectory,
 ) -> None:
     current_commit = snapshot_dir.get_current_commit()
     if current_commit is None:
         return
-    git_command = environ.get('REPORT_NEW_LINTER_ERROR_GIT_COMMAND', 'git')
+    git_command = environ.get("REPORT_NEW_LINTER_ERROR_GIT_COMMAND", "git")
     linted_files_diff = subprocess.check_output(
-        [git_command, 'diff', '--unified', f'{current_commit}..HEAD'],
+        [git_command, "diff", "--unified", f"{current_commit}..HEAD"],
         text=True,
     ).splitlines(keepends=True)
-    with open(snapshot_dir.get_snapshot_path(), 'r') as f:
+    with open(snapshot_dir.get_snapshot_path(), "r") as f:
         snapshot_lines = f.readlines()
         adjusted_snapshot_lines = adjust_line_numbers(
             iter_diff_lines=iter(linted_files_diff),
             iter_snapshot_lines=iter(snapshot_lines),
         )
-    with open(snapshot_dir.get_snapshot_path(), 'w') as f:
-        f.writelines('\n'.join(adjusted_snapshot_lines) + '\n')
+    with open(snapshot_dir.get_snapshot_path(), "w") as f:
+        f.writelines("\n".join(adjusted_snapshot_lines) + "\n")
 
 
 def save_current_commit(
-        environ: Environ,
-        snapshot_dir: SnapshotDirectory,
+    environ: Environ,
+    snapshot_dir: SnapshotDirectory,
 ) -> None:
-    git_command = environ.get('REPORT_NEW_LINTER_ERROR_GIT_COMMAND', 'git')
+    git_command = environ.get("REPORT_NEW_LINTER_ERROR_GIT_COMMAND", "git")
     new_commit = subprocess.check_output(
-        [git_command, 'rev-parse', 'HEAD'],
+        [git_command, "rev-parse", "HEAD"],
         text=True,
     ).strip()
     snapshot_dir.save_current_commit(new_commit)
@@ -191,11 +191,12 @@ class DiffLine:
     """
     Represents each line in a hunk in the output of `git diff -u`
     """
-    line_type: Literal['+', '-']
+
+    line_type: Literal["+", "-"]
     content: str
 
 
-ContextLine = Literal[' ']
+ContextLine = Literal[" "]
 
 DiffPayloadLine = Union[ContextLine, DiffLine]
 
@@ -205,6 +206,7 @@ class GitDiffHunk:
     """
     Represents each hunk in the output of `git diff -u`
     """
+
     path_minus: PurePath
     path_plus: PurePath
     initial_line_number: int
@@ -217,6 +219,7 @@ class SnapshotEntry:
     Represents each entry in the output of `mypy`
     (Supports other linters in the future)
     """
+
     path: PurePath
     line_number: int
     other_contents: str
@@ -228,7 +231,7 @@ SnapshotLine = Union[str, SnapshotEntry]
 def format_snapshot_line(snapshot_line: SnapshotLine) -> str:
     if isinstance(snapshot_line, str):
         return snapshot_line
-    return f'{snapshot_line.path}:{snapshot_line.line_number}{snapshot_line.other_contents}'
+    return f"{snapshot_line.path}:{snapshot_line.line_number}{snapshot_line.other_contents}"
 
 
 class AdjustmentTable:
@@ -243,8 +246,7 @@ class AdjustmentTable:
 
     @staticmethod
     class AccumulatedOffsets:
-        _offsets: list[
-            int]  # key is original line number - 1, value is total offset
+        _offsets: list[int]  # key is original line number - 1, value is total offset
 
         def __init__(self, non_accumulated_offsets: list[int]):
             self._offsets = list(accumulate(non_accumulated_offsets))
@@ -258,10 +260,10 @@ class AdjustmentTable:
             return self._offsets[line_index]
 
     def add_offset_of(
-            self,
-            path: PurePath,
-            line_number: int,
-            offset: int,
+        self,
+        path: PurePath,
+        line_number: int,
+        offset: int,
     ) -> None:
         line_index = line_number - 1  # zero-based index
         if len(self._contents[path]) <= line_index:
@@ -284,22 +286,20 @@ class CollectedSnapshotEntries:
         dict[
             int,  # line_number
             int,  # index in _snapshot_lines
-        ]
+        ],
     ]
 
     def __init__(self, iter_snapshot_lines: Iterator[str]) -> None:
         self._snapshot_lines = []
         self._index = defaultdict(lambda: {})
-        for (i, line) in enumerate(parse_snapshot_lines(iter_snapshot_lines)):
+        for i, line in enumerate(parse_snapshot_lines(iter_snapshot_lines)):
             self._snapshot_lines.append(line)
             if isinstance(line, SnapshotEntry):
                 self._index[line.path][line.line_number] = i
 
     def to_formatted_snapshot_lines(self) -> list[str]:
         return [
-            format_snapshot_line(sl)
-            for sl in self._snapshot_lines
-            if sl is not None
+            format_snapshot_line(sl) for sl in self._snapshot_lines if sl is not None
         ]
 
     def get_entry(
@@ -319,9 +319,9 @@ class CollectedSnapshotEntries:
         return None
 
     def delete_entry(
-            self,
-            path_minus: PurePath,
-            line_number: int,
+        self,
+        path_minus: PurePath,
+        line_number: int,
     ):
         index_in_path = self._index.get(path_minus)
         if index_in_path is None:
@@ -333,8 +333,8 @@ class CollectedSnapshotEntries:
         del index_in_path[line_number]
 
     def adjust_entry_line_numbers(
-            self,
-            table: AdjustmentTable,
+        self,
+        table: AdjustmentTable,
     ):
         """
         Adjust line numbers of snapshot entries according to adjustment table.
@@ -343,11 +343,11 @@ class CollectedSnapshotEntries:
         :param table:
         :return:
         """
-        for (path, offsets) in table.lines_and_total_offsets().items():
+        for path, offsets in table.lines_and_total_offsets().items():
             index_in_path = self._index.get(path)
             if index_in_path is None:
                 continue
-            for (original_line_number, line_index) in index_in_path.items():
+            for original_line_number, line_index in index_in_path.items():
                 entry = self._snapshot_lines[line_index]
                 if not isinstance(entry, SnapshotEntry):
                     continue
@@ -362,8 +362,8 @@ class CollectedSnapshotEntries:
 
 
 def adjust_line_numbers(
-        iter_diff_lines: Iterator[str],
-        iter_snapshot_lines: Iterator[str],
+    iter_diff_lines: Iterator[str],
+    iter_snapshot_lines: Iterator[str],
 ) -> list[str]:
     """
     :param iter_diff_lines:
@@ -377,7 +377,7 @@ def adjust_line_numbers(
     iter_diff_hunk = parse_git_diff_hunks(iter_diff_lines)
     for diff_hunk in iter_diff_hunk:
         original_line_number_offset = diff_hunk.initial_line_number
-        for (i, diff_line) in enumerate(diff_hunk.diffs):
+        for i, diff_line in enumerate(diff_hunk.diffs):
             original_line_number = original_line_number_offset + i
             snapshot_line = snapshot_entries.get_entry(
                 diff_hunk.path_minus,
@@ -385,20 +385,20 @@ def adjust_line_numbers(
             )
 
             if snapshot_line is None:
-                if diff_line == ' ':
+                if diff_line == " ":
                     adjustment_table.add_offset_of(
                         diff_hunk.path_minus,
                         original_line_number,
                         0,
                     )
-                elif diff_line.line_type == '-':
+                elif diff_line.line_type == "-":
                     # Previous line is deleted
                     adjustment_table.add_offset_of(
                         diff_hunk.path_minus,
                         original_line_number,
                         -1,
                     )
-                elif diff_line.line_type == '+':
+                elif diff_line.line_type == "+":
                     # Previous line is added
                     original_line_number_offset -= 1
                     adjustment_table.add_offset_of(
@@ -407,14 +407,14 @@ def adjust_line_numbers(
                         +1,
                     )
 
-            elif diff_line == ' ':
+            elif diff_line == " ":
                 # snapshot line isn't changed
                 adjustment_table.add_offset_of(
                     diff_hunk.path_minus,
                     original_line_number,
                     0,
                 )
-            elif diff_line.line_type == '-':
+            elif diff_line.line_type == "-":
                 # line in the snapshot is deleted
                 snapshot_entries.delete_entry(
                     diff_hunk.path_minus,
@@ -425,7 +425,7 @@ def adjust_line_numbers(
                     original_line_number,
                     -1,
                 )
-            elif diff_line.line_type == '+':
+            elif diff_line.line_type == "+":
                 # line different from the one in the snapshot is added
                 original_line_number_offset -= 1
 
@@ -440,24 +440,24 @@ def adjust_line_numbers(
 
 
 def parse_git_diff_file_path(
-        sign: Literal["---", "+++"],
-        line: str,
+    sign: Literal["---", "+++"],
+    line: str,
 ) -> PurePath:
-    return PurePath(drop_git_diff_prefix(line[len(sign) + 1:]))
+    return PurePath(drop_git_diff_prefix(line[len(sign) + 1 :]))
 
 
 def drop_git_diff_prefix(path: str) -> str:
-    regex = re.compile(r'^[ab]/')
-    return regex.sub('', path)
+    regex = re.compile(r"^[ab]/")
+    return regex.sub("", path)
 
 
 def parse_diff_current_initial_line_number(line: str) -> int:
     # Example: @@ -1,4 +1,5 @@
-    return int(line[len('@@ -'):].split(',', 1)[0])
+    return int(line[len("@@ -") :].split(",", 1)[0])
 
 
 def parse_git_diff_hunks(
-        iter_diff_lines: Iterator[str],
+    iter_diff_lines: Iterator[str],
 ) -> Iterator[GitDiffHunk]:
     current_path_minus: Optional[PurePath] = None
     current_path_plus: Optional[PurePath] = None
@@ -467,15 +467,15 @@ def parse_git_diff_hunks(
     is_empty = True
     for line in iter_diff_lines:
         is_empty = False
-        l = line.rstrip('\n')
-        if l.startswith('--- '):
+        l = line.rstrip("\n")
+        if l.startswith("--- "):
             if current_path_minus is None:
                 current_path_minus = parse_git_diff_file_path("---", l)
             else:
                 if current_path_plus is None:
-                    raise ValueError('Malformed diff hunk: missing +++ line')
+                    raise ValueError("Malformed diff hunk: missing +++ line")
                 if current_initial_line_number is None:
-                    raise ValueError('Malformed diff hunk: missing @@ line')
+                    raise ValueError("Malformed diff hunk: missing @@ line")
 
                 yield GitDiffHunk(
                     path_minus=current_path_minus,
@@ -485,16 +485,16 @@ def parse_git_diff_hunks(
                 )
                 current_diffs = []
                 current_path_minus = parse_git_diff_file_path("---", l)
-        elif l.startswith('+++ '):
+        elif l.startswith("+++ "):
             current_path_plus = parse_git_diff_file_path("+++", l)
-        elif l.startswith('@@ '):
+        elif l.startswith("@@ "):
             if current_diffs:
                 if current_path_minus is None:
-                    raise ValueError('Malformed diff hunk: missing --- line')
+                    raise ValueError("Malformed diff hunk: missing --- line")
                 if current_path_plus is None:
-                    raise ValueError('Malformed diff hunk: missing +++ line')
+                    raise ValueError("Malformed diff hunk: missing +++ line")
                 if current_initial_line_number is None:
-                    raise ValueError('Malformed diff hunk: missing @@ line')
+                    raise ValueError("Malformed diff hunk: missing @@ line")
 
                 yield GitDiffHunk(
                     path_minus=current_path_minus,
@@ -503,14 +503,13 @@ def parse_git_diff_hunks(
                     diffs=current_diffs,
                 )
                 current_diffs = []
-            current_initial_line_number = \
-                parse_diff_current_initial_line_number(l)
-        elif l.startswith(' '):
-            current_diffs.append(' ')
-        elif l.startswith('+'):
-            current_diffs.append(DiffLine(line_type='+', content=l[1:]))
-        elif l.startswith('-'):
-            current_diffs.append(DiffLine(line_type='-', content=l[1:]))
+            current_initial_line_number = parse_diff_current_initial_line_number(l)
+        elif l.startswith(" "):
+            current_diffs.append(" ")
+        elif l.startswith("+"):
+            current_diffs.append(DiffLine(line_type="+", content=l[1:]))
+        elif l.startswith("-"):
+            current_diffs.append(DiffLine(line_type="-", content=l[1:]))
         else:
             pass  # ignore other lines
 
@@ -518,11 +517,11 @@ def parse_git_diff_hunks(
         return
 
     if current_path_minus is None:
-        raise ValueError('Malformed diff hunk: missing --- line')
+        raise ValueError("Malformed diff hunk: missing --- line")
     if current_path_plus is None:
-        raise ValueError('Malformed diff hunk: missing +++ line')
+        raise ValueError("Malformed diff hunk: missing +++ line")
     if current_initial_line_number is None:
-        raise ValueError('Malformed diff hunk: missing @@ line')
+        raise ValueError("Malformed diff hunk: missing @@ line")
 
     yield GitDiffHunk(
         path_minus=current_path_minus,
@@ -532,15 +531,16 @@ def parse_git_diff_hunks(
     )
 
 
-re_snapshot_line = re.compile(r'^(.+):(\d+)(.*)')
+re_snapshot_line = re.compile(r"^(.+):(\d+)(.*)")
+
 
 def parse_snapshot_lines(
-        iter_diff_lines: Iterator[str],
+    iter_diff_lines: Iterator[str],
 ) -> Iterator[SnapshotLine]:
     for line in iter_diff_lines:
-        m = re_snapshot_line.match(line.rstrip('\n'))
+        m = re_snapshot_line.match(line.rstrip("\n"))
         if m is None:
-            yield line.rstrip('\n')
+            yield line.rstrip("\n")
             continue
         (path, line_number_str, other_contents) = m.groups()
         yield SnapshotEntry(
@@ -550,7 +550,7 @@ def parse_snapshot_lines(
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys as real_sys
 
     main(os.environ, cast(Sys, real_sys))
