@@ -46,7 +46,7 @@ class MainTestCase(unittest.TestCase):
             pass
 
         test_sys = TestSys(
-            ['report_new_linter_errors.py', 'python', 'example_linter.py',
+            ['report_new_linter_errors.py', 'python3', 'example_linter.py',
              'setUp'])
         with self.assertRaises(SystemExit) as cm:
             main(env, cast(Sys, test_sys))
@@ -67,7 +67,7 @@ class MainTestCase(unittest.TestCase):
 
     def test_new_errors_found(self):
         test_sys = TestSys(
-            ['report_new_linter_errors.py', 'python', 'example_linter.py',
+            ['report_new_linter_errors.py', 'python3', 'example_linter.py',
              'new_errors'])
         with self.assertRaises(SystemExit) as cm:
             main(env, cast(Sys, test_sys))
@@ -85,7 +85,7 @@ class MainTestCase(unittest.TestCase):
 
     def test_fewer_errors_found(self):
         test_sys = TestSys(
-            ['report_new_linter_errors.py', 'python', 'example_linter.py',
+            ['report_new_linter_errors.py', 'python3', 'example_linter.py',
              'fewer_errors'])
         main(env, cast(Sys, test_sys))
         self.assertEqual(
@@ -113,7 +113,7 @@ class MainTestCase(unittest.TestCase):
 
     def test_when_no_changes(self):
         test_sys = TestSys(
-            ['report_new_linter_errors.py', 'python', 'example_linter.py',
+            ['report_new_linter_errors.py', 'python3', 'example_linter.py',
              'setUp'])
         main(env, cast(Sys, test_sys))
         self.assertEqual(
@@ -135,7 +135,7 @@ class MainTestCase(unittest.TestCase):
 
     def test_when_removed_and_added(self):
         test_sys = TestSys(
-            ['report_new_linter_errors.py', 'python', 'example_linter.py',
+            ['report_new_linter_errors.py', 'python3', 'example_linter.py',
              'removed_and_added'])
         with self.assertRaises(SystemExit) as cm:
             main(env, cast(Sys, test_sys))
