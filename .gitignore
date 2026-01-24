@@ -170,4 +170,6 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 /test-tmp
+
 /report-new-linter-errors
+/.report-new-linter-errors/

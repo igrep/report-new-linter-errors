@@ -127,7 +127,7 @@ class SnapshotDirectory:
     def from_environ(cls, environ: Environ) -> "SnapshotDirectory":
         root = environ.get(
             "REPORT_NEW_LINTER_ERROR_PATH",
-            os.path.join(os.getcwd(), ".report-new-linter-error"),
+            os.path.join(os.getcwd(), ".report-new-linter-errors"),
         )
         if not os.path.exists(root):
             os.makedirs(root)
