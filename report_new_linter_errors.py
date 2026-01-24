@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/bin/env python3
 
 """
 $ report-new-linter-errors <command> [args...]
