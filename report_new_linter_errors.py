@@ -78,14 +78,15 @@ def main(environ: Environ, sys: Sys) -> None:
         stdout=subprocess.PIPE,
         text=True,
     ) as diff_proc:
+        stdout = diff_proc.stdout
         # Skip header lines
-        diff_proc.stdout.readline()
-        diff_proc.stdout.readline()
+        stdout.readline()
+        stdout.readline()
 
         new_errors_found = False
         some_errors_removed = False
         while True:
-            l = diff_proc.stdout.readline().rstrip("\n")
+            l = stdout.readline().rstrip("\n")
             if not l:
                 break
 
