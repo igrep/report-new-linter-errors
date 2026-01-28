@@ -78,7 +78,7 @@ def main(environ: Environ, sys: Sys) -> None:
         stdout=subprocess.PIPE,
         text=True,
     ) as diff_proc:
-        stdout = diff_proc.stdout
+        stdout = cast(IO[str], diff_proc.stdout)
         # Skip header lines
         stdout.readline()
         stdout.readline()
