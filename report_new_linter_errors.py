@@ -12,7 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from itertools import accumulate
 from pathlib import PurePath
-from typing import Protocol, TextIO, Any, cast, Iterator, Literal, Optional, Union
+from typing import Protocol, TextIO, Any, cast, Iterator, Literal, Optional, Union, IO
 
 
 # https://stackoverflow.com/questions/1101957/are-there-any-standard-exit-status-codes-in-linux
