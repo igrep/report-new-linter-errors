@@ -6,8 +6,24 @@ original_output = [
     '   original output 3',
 ]
 
+new_errors_output = original_output + [
+    '+++new output 1',
+]
 
-def print_original_output():
+
+fewer_errors_output = [
+    '---original output 1',
+    '   original output 3',
+]
+
+removed_and_added_output = [
+    '+++new output 1',
+    '---original output 1',
+    '+++original output 2',
+]
+
+
+def _print_original_output():
     for line in original_output:
         print(line)
 
@@ -15,16 +31,15 @@ def print_original_output():
 if __name__ == '__main__':
     command = sys.argv[1]
     if command == 'setUp':
-        print_original_output()
+        _print_original_output()
     elif command == 'new_errors':
-        print_original_output()
-        print('+++new output 1')
+        for line in new_errors_output:
+            print(line)
     elif command == 'fewer_errors':
-        print('---original output 1')
-        print('   original output 3')
+        for line in fewer_errors_output:
+            print(line)
     elif command == 'removed_and_added':
-        print('+++new output 1')
-        print('---original output 1')
-        print('+++original output 2')
+        for line in removed_and_added_output:
+            print(line)
     elif command == 'no_changes':
-        print_original_output()
+        _print_original_output()

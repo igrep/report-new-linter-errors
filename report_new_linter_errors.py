@@ -104,20 +104,18 @@ def main(environ: Environ, sys: Sys) -> None:
                 "ERROR: diff command reported that the command may have produced new errors. Fix it or update the snapshot.",
                 file=cast(Any, sys.stderr),
             )
-            if some_errors_removed:
-                print(
-                    "Thank you! It looks like that you fixed some errors. But you also introduced new errors. Fix it!",
-                    file=cast(Any, sys.stdout),
-                )
-            sys.exit(1)
 
         if some_errors_removed:
             print(
                 "Congratulations! It looks like that you fixed some errors.",
                 file=cast(Any, sys.stdout),
             )
-            print("Saving the new snapshot.", file=cast(Any, sys.stdout))
-            shutil.copy(new_snapshot_path, snapshot_path)
+
+        print("Saving the new snapshot.", file=cast(Any, sys.stdout))
+        shutil.copy(new_snapshot_path, snapshot_path)
+
+        if new_errors_found:
+            sys.exit(1)
 
 
 class SnapshotDirectory:

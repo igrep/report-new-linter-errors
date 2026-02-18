@@ -90,9 +90,9 @@ class MainTestCase(unittest.TestCase):
         )
         with open(snapshot_path) as snapshot:
             self.assertEqual(
-                example_linter.original_output,
+                example_linter.new_errors_output,
                 list(map(str.rstrip, snapshot.readlines())),
-                "snapshot file is NOT updated",
+                "snapshot file is updated",
             )
 
     def test_fewer_errors_found(self):
@@ -120,10 +120,7 @@ class MainTestCase(unittest.TestCase):
         )
         with open(snapshot_path) as snapshot:
             self.assertEqual(
-                [
-                    "---original output 1",
-                    "   original output 3",
-                ],
+                example_linter.fewer_errors_output,
                 list(map(str.rstrip, snapshot.readlines())),
                 "snapshot file is updated with the new output",
             )
@@ -166,16 +163,16 @@ class MainTestCase(unittest.TestCase):
             "ERROR: diff command reported that the command may have produced new errors. Fix it or update the snapshot.",
             test_sys.stderr.getvalue().splitlines()[-1],
         )
-        self.assertEqual(
-            "Thank you! It looks like that you fixed some errors. But you also introduced new errors. Fix it!",
-            list(map(str.rstrip, test_sys.stdout.getvalue().splitlines()))[-1],
+        self.assertIn(
+            "Congratulations! It looks like that you fixed some errors.",
+            list(map(str.rstrip, test_sys.stdout.getvalue().splitlines())),
             "stdout contains the new output",
         )
         with open(snapshot_path) as snapshot:
             self.assertEqual(
-                example_linter.original_output,
+                example_linter.removed_and_added_output,
                 list(map(str.rstrip, snapshot.readlines())),
-                "snapshot file is NOT updated",
+                "snapshot file is updated",
             )
 
 
