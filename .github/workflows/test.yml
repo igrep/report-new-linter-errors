@@ -1,0 +1,33 @@
+name: test
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with: { python-version: '3.11' }
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+    - name: Install requirements
+      run: uv pip install mypy
+
+    - uses: astral-sh/ruff-action@v3
+      with: { args: "format --check --diff" }
+    - run: ruff check --fix
+
+    - name: Setup Git user
+      run: |
+        git config --global user.email "report-new-linter-errors@mail.invalid"
+        git config --global user.name "report-new-linter-errors"
+    - name: Run report-new-linter-errors with mypy, then save the snapshot
+      run: |
+        set -eu
+        make
+        python report-new-linter-errors mypy report_new_linter_errors.py
+        git add .report-new-linter-errors/
+        git commit -m "Update report-new-linter-errors snapshot"

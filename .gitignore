@@ -172,4 +172,3 @@ cython_debug/
 /test-tmp
 
 /report-new-linter-errors
-/.report-new-linter-errors/
