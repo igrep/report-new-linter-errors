@@ -1,7 +1,7 @@
 name: test
 on: [push, pull_request]
 jobs:
-  build:
+  dogfood:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,11 +15,6 @@ jobs:
       uses: astral-sh/setup-uv@v7
     - name: Install requirements
       run: uv pip install --system mypy
-
-    - uses: astral-sh/ruff-action@v3
-      with: { args: '--version' }
-    - run: ruff format --diff report_new_linter_errors.py test.py
-    - run: ruff check --diff report_new_linter_errors.py test.py
 
     - name: Setup Git user
       run: |
@@ -35,3 +30,21 @@ jobs:
         git commit -m "Update report-new-linter-errors snapshot"
         git push
         exit $exit_code
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - uses: astral-sh/ruff-action@v3
+      with: { args: '--version' }
+    - run: ruff format --diff report_new_linter_errors.py test.py
+    - run: ruff check --diff report_new_linter_errors.py test.py
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with: { python-version: '3.11' }
+    - run: python test.py
