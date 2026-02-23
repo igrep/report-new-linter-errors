@@ -27,8 +27,10 @@ jobs:
         git config --global user.name "report-new-linter-errors"
     - name: Run report-new-linter-errors with mypy, then save the snapshot
       run: |
-        set -eu
+        set +e # Keep going even if the command fails, so we can commit the new snapshot
         make
         python report-new-linter-errors mypy report_new_linter_errors.py
+        exit_code=$?
         git add .report-new-linter-errors/
         git commit -m "Update report-new-linter-errors snapshot"
+        exit $exit_code
