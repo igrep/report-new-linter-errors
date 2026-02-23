@@ -1,0 +1,2 @@
+report_new_linter_errors.py:54: error: Item "None" of "IO[str] | None" has no attribute "read"  [union-attr]
+Found 1 error in 1 file (checked 1 source file)
