@@ -86,16 +86,16 @@ def main(environ: Environ, sys: Sys) -> None:
         new_errors_found = False
         some_errors_removed = False
         while True:
-            l = stdout.readline().rstrip("\n")
-            if not l:
+            line = stdout.readline().rstrip("\n")
+            if not line:
                 break
 
-            if l.startswith("+"):
-                sys.stderr.write(f"{l[1:]}\n")
+            if line.startswith("+"):
+                sys.stderr.write(f"{line[1:]}\n")
                 new_errors_found = True
                 continue
 
-            if l.startswith("-"):
+            if line.startswith("-"):
                 some_errors_removed = True
                 continue
 
@@ -466,10 +466,10 @@ def parse_git_diff_hunks(
     is_empty = True
     for line in iter_diff_lines:
         is_empty = False
-        l = line.rstrip("\n")
-        if l.startswith("--- "):
+        line = line.rstrip("\n")
+        if line.startswith("--- "):
             if current_path_minus is None:
-                current_path_minus = parse_git_diff_file_path("---", l)
+                current_path_minus = parse_git_diff_file_path("---", line)
             else:
                 if current_path_plus is None:
                     raise ValueError("Malformed diff hunk: missing +++ line")
@@ -483,10 +483,10 @@ def parse_git_diff_hunks(
                     diffs=current_diffs,
                 )
                 current_diffs = []
-                current_path_minus = parse_git_diff_file_path("---", l)
-        elif l.startswith("+++ "):
-            current_path_plus = parse_git_diff_file_path("+++", l)
-        elif l.startswith("@@ "):
+                current_path_minus = parse_git_diff_file_path("---", line)
+        elif line.startswith("+++ "):
+            current_path_plus = parse_git_diff_file_path("+++", line)
+        elif line.startswith("@@ "):
             if current_diffs:
                 if current_path_minus is None:
                     raise ValueError("Malformed diff hunk: missing --- line")
@@ -502,13 +502,13 @@ def parse_git_diff_hunks(
                     diffs=current_diffs,
                 )
                 current_diffs = []
-            current_initial_line_number = parse_diff_current_initial_line_number(l)
-        elif l.startswith(" "):
+            current_initial_line_number = parse_diff_current_initial_line_number(line)
+        elif line.startswith(" "):
             current_diffs.append(" ")
-        elif l.startswith("+"):
-            current_diffs.append(DiffLine(line_type="+", content=l[1:]))
-        elif l.startswith("-"):
-            current_diffs.append(DiffLine(line_type="-", content=l[1:]))
+        elif line.startswith("+"):
+            current_diffs.append(DiffLine(line_type="+", content=line[1:]))
+        elif line.startswith("-"):
+            current_diffs.append(DiffLine(line_type="-", content=line[1:]))
         else:
             pass  # ignore other lines
 
