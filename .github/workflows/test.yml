@@ -33,4 +33,5 @@ jobs:
         exit_code=$?
         git add .report-new-linter-errors/
         git commit -m "Update report-new-linter-errors snapshot"
+        git push
         exit $exit_code
