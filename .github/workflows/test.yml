@@ -17,6 +17,7 @@ jobs:
       run: uv pip install --system mypy
 
     - uses: astral-sh/ruff-action@v3
+      with: { args: '--version' }
     - run: ruff format --diff report_new_linter_errors.py test.py
     - run: ruff check --diff report_new_linter_errors.py test.py
 
