@@ -17,8 +17,8 @@ jobs:
       run: uv pip install --system mypy
 
     - uses: astral-sh/ruff-action@v3
-      with: { args: "format --check --diff report_new_linter_errors.py test.py" }
-    - run: ruff check --fix report_new_linter_errors.py test.py
+    - run: ruff format --diff report_new_linter_errors.py test.py
+    - run: ruff check --diff report_new_linter_errors.py test.py
 
     - name: Setup Git user
       run: |
