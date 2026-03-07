@@ -1,7 +1,8 @@
 #!/bin/env python3
 
 """
-$ report-new-linter-errors <command> [args...]
+$ report-new-linter-errors init <profile_name> <linter_command> [linter_args...]
+$ report-new-linter-errors run <profile_name>
 """
 
 import os
