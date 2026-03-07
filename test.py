@@ -53,7 +53,12 @@ class MainTestCase(unittest.TestCase):
             pass
 
         test_sys = TestSys(
-            ["report_new_linter_errors.py", "python3", "example_linter.py", "setUp"]
+            [
+                "report_new_linter_errors.py",
+                sys.executable,
+                "example_linter.py",
+                "setUp",
+            ]
         )
         with self.assertRaises(SystemExit) as cm:
             main(env, cast(Sys, test_sys))
@@ -76,7 +81,7 @@ class MainTestCase(unittest.TestCase):
         test_sys = TestSys(
             [
                 "report_new_linter_errors.py",
-                "python3",
+                sys.executable,
                 "example_linter.py",
                 "new_errors",
             ]
@@ -99,7 +104,7 @@ class MainTestCase(unittest.TestCase):
         test_sys = TestSys(
             [
                 "report_new_linter_errors.py",
-                "python3",
+                sys.executable,
                 "example_linter.py",
                 "fewer_errors",
             ]
@@ -127,7 +132,12 @@ class MainTestCase(unittest.TestCase):
 
     def test_when_no_changes(self):
         test_sys = TestSys(
-            ["report_new_linter_errors.py", "python3", "example_linter.py", "setUp"]
+            [
+                "report_new_linter_errors.py",
+                sys.executable,
+                "example_linter.py",
+                "setUp",
+            ]
         )
         main(env, cast(Sys, test_sys))
         self.assertEqual(
@@ -151,7 +161,7 @@ class MainTestCase(unittest.TestCase):
         test_sys = TestSys(
             [
                 "report_new_linter_errors.py",
-                "python3",
+                sys.executable,
                 "example_linter.py",
                 "removed_and_added",
             ]
