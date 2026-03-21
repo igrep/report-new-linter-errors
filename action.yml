@@ -1,0 +1,61 @@
+name: Report new linter errors
+description: |
+  This action reports new linter errors in a commit.
+  Requires permissions `contents: write` to save the snapshot of linter errors.
+inputs:
+  command:
+    description: The command to run the linter and output errors in a specific format.
+    required: true
+  snapshot_storage:
+    required: true
+    description: The method to save the snapshot of linter errors. Can be "cache" or "commit".
+  cache_key_prefix:
+    required: false
+    default: "report-new-linter-errors-snapshot"
+    description: The prefix for the cache name when using "cache" snapshot storage. Default is "report-new-linter-errors-snapshot".
+runs:
+  using: composite
+  steps:
+  - id: install
+    shell: bash
+    run: |
+      curl -L -o report-new-linter-errors https://github.com/igrep/report-new-linter-errors/releases/download/v0.0.1/report-new-linter-errors
+      chmod +x report-new-linter-errors
+      SHA256="56c6770df5676d9fb7c399b2a0ece1a03ddc67e497a4936b20f92e79f941e0a2"
+      echo "$SHA256  report-new-linter-errors" | sha256sum -c -
+  - id: restore-cache
+    if: ${{ inputs.snapshot_storage == 'cache' }}
+    uses: actions/cache/restore@v5
+    with:
+      key: ${{ inputs.cache_key_prefix }}-${{ github.ref }}
+      path: .report-new-linter-errors/
+      restore-keys: ${{ inputs.cache_key_prefix }}-
+  - id: run
+    shell: bash
+    env:
+      USERNAME: github-actions[bot]
+      EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+    run: |
+      git config --global user.name "$USERNAME"
+      git config --global user.email "$EMAIL"
+      set +e # Keep going even if the command fails, so we can commit the new snapshot
+      ./report-new-linter-errors ${{ inputs.command }}
+      exit_code=$?
+      if [ "${{ inputs.snapshot_storage }}" = "commit" ]; then
+        git add .report-new-linter-errors/
+        git commit -m "Update report-new-linter-errors snapshot"
+        git push
+      elif [ "${{ inputs.snapshot_storage }}" = "cache" ]; then
+        echo "Saving snapshot as cache"
+      else
+        echo "Invalid snapshot_storage value: ${{ inputs.snapshot_storage }}"
+        # command line usage error. Ref. https://stackoverflow.com/questions/1101957/are-there-any-standard-exit-status-codes-in-linux
+        exit 64
+      fi
+      exit $exit_code
+  - id: save-cache
+    if: ${{ inputs.snapshot_storage == 'cache' }}
+    uses: actions/cache/save@v5
+    with:
+      key: ${{ inputs.cache_key_prefix }}-${{ github.ref }}
+      path: .report-new-linter-errors/
