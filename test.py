@@ -270,6 +270,23 @@ class AdjustLineNumbersTestCase(unittest.TestCase):
                     list(actual),
                 )
 
+    def test_adjust_line_numbers_with_line_0(self):
+        # This tests the fix for the IndexError when a diff hunk starts at line 0
+        diff = [
+            "--- a/file.py\n",
+            "+++ b/file.py\n",
+            "@@ -0,0 +1,1 @@\n",
+            "+new line\n",
+        ]
+        snapshot = [
+            "file.py:10: error: msg\n",
+        ]
+        actual = adjust_line_numbers(iter(diff), iter(snapshot))
+        self.assertEqual(
+            ["file.py:10: error: msg"],
+            list(actual),
+        )
+
 
 class ParseGitDiffHunksTestCase(unittest.TestCase):
     def test_parse_git_diff_hunks(self):

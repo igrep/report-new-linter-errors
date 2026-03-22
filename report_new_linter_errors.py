@@ -264,6 +264,8 @@ class AdjustmentTable:
         line_number: int,
         offset: int,
     ) -> None:
+        if line_number <= 0:
+            return
         line_index = line_number - 1  # zero-based index
         if len(self._contents[path]) <= line_index:
             self._contents[path].extend(
