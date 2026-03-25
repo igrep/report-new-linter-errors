@@ -452,9 +452,10 @@ def drop_git_diff_prefix(path: str) -> str:
     return regex.sub("", path)
 
 
+re_separator = re.compile(r'[, ]')
 def parse_diff_current_initial_line_number(line: str) -> int:
     # Example: @@ -1,4 +1,5 @@
-    return int(line[len("@@ -") :].split(",", 1)[0])
+    return int(re_separator.split(line[len("@@ -") :])[0])
 
 
 def parse_git_diff_hunks(

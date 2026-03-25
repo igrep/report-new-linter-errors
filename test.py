@@ -425,6 +425,29 @@ class ParseGitDiffHunksTestCase(unittest.TestCase):
             self.assertEqual(expected, actual)
 
 
+    def test_parse_git_diff_hunks_with_single_line_hunk(self):
+        diff = [
+            "--- a/file.txt\n",
+            "+++ b/file.txt\n",
+            "@@ -1 +1 @@\n",
+            "-old\n",
+            "+new\n",
+        ]
+        actual = list(parse_git_diff_hunks(iter(diff)))
+        expected = [
+            GitDiffHunk(
+                path_minus=PurePath("file.txt"),
+                path_plus=PurePath("file.txt"),
+                initial_line_number=1,
+                diffs=[
+                    DiffLine(line_type="-", content="old"),
+                    DiffLine(line_type="+", content="new"),
+                ],
+            )
+        ]
+        self.assertEqual(actual, expected)
+
+
 class ParseSnapshotLinesTestCase(unittest.TestCase):
     def test_parse_snapshot_lines(self):
         with open("./example/mypy-base.txt", encoding="utf-8") as snapshot_f:
