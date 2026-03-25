@@ -424,7 +424,6 @@ class ParseGitDiffHunksTestCase(unittest.TestCase):
             ]
             self.assertEqual(expected, actual)
 
-
     def test_parse_git_diff_hunks_with_single_line_hunk(self):
         diff = [
             "--- a/file.txt\n",
