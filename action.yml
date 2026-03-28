@@ -38,6 +38,7 @@ runs:
     run: |
       git config --global user.name "$USERNAME"
       git config --global user.email "$EMAIL"
+      git fetch origin "$(cat .report-new-linter-errors/commit)" || true
       set +e # Keep going even if the command fails, so we can commit the new snapshot
       ./report-new-linter-errors ${{ inputs.command }}
       exit_code=$?
