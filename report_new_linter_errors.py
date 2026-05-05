@@ -1,8 +1,29 @@
 #!/usr/bin/env python3
 
 """
-$ report-new-linter-errors init <profile_name> <linter_command> [linter_args...]
+```
+$ report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] -- [target_files_or_directories...]
+```
+
+Create a profile named `profile_name` by running the `linter_command` with
+`linter_options` and `target_files_or_directories` and save the output as a
+snapshot.
+
+**NOTE:**
+It's recommended to specify `target_files_or_directories` by putting `--` before
+them if your linter supports it. The `run` subcommand replaces the
+`target_files_or_directories` with the ones that are changed since the last
+snapshot, so if you specify all files in the `snapshot` subcommand, you can
+just run `report-new-linter-errors run <profile_name>` to check if there are
+new errors in the changed files.
+
+```
 $ report-new-linter-errors run <profile_name>
+```
+
+Check if there are new errors in the changed files since the last snapshot by
+running the `linter_command` with the changed files as arguments and comparing
+the output with the snapshot.
 """
 
 import os
