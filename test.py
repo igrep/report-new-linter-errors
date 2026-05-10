@@ -1,22 +1,22 @@
 import os
-import unittest
 import sys
+import unittest
 from io import StringIO
 from pathlib import PurePath
 from typing import cast
 
 from report_new_linter_errors import (
-    main,
-    Sys,
-    EXIT_CODE_NO_SNAPSHOT_FILE,
-    adjust_line_numbers,
-    parse_git_diff_hunks,
-    GitDiffHunk,
     DiffLine,
-    parse_snapshot_lines,
+    EXIT_CODE_NO_SNAPSHOT_FILE,
+    EXIT_CODE_USAGE,
+    GitDiffHunk,
     SnapshotEntry,
+    Sys,
+    adjust_line_numbers,
+    main,
+    parse_git_diff_hunks,
+    parse_snapshot_lines,
 )
-import example_linter
 
 stubbed_git = "stubbed-git.bat" if sys.platform == "win32" else "stubbed-git.py"
 env_override = {
@@ -27,7 +27,11 @@ env_override = {
 }
 env = os.environ | env_override
 
-snapshot_path = os.path.join(env["REPORT_NEW_LINTER_ERROR_PATH"], "snapshot")
+profile_name = "default"
+profile_root = os.path.join(env["REPORT_NEW_LINTER_ERROR_PATH"], profile_name)
+snapshot_path = os.path.join(profile_root, "snapshot")
+commit_path = os.path.join(profile_root, "commit")
+command_path = os.path.join(profile_root, "command.json")
 
 
 class TestSys:
@@ -47,143 +51,161 @@ class TestSys:
 
 class MainTestCase(unittest.TestCase):
     def setUp(self):
-        try:
-            os.remove(snapshot_path)
-        except FileNotFoundError:
-            pass
+        if os.path.exists(profile_root):
+            for name in os.listdir(profile_root):
+                os.remove(os.path.join(profile_root, name))
+        else:
+            os.makedirs(profile_root)
 
-        test_sys = TestSys(
-            [
-                "report_new_linter_errors.py",
-                sys.executable,
-                "example_linter.py",
-                "setUp",
-            ]
+    def _py_linter_cmd(self) -> list[str]:
+        # A tiny linter shim controlled by LINTER_LINES.
+        program = (
+            "import os; "
+            "lines=os.environ.get('LINTER_LINES','').splitlines(); "
+            "[print(l) for l in lines if l!='']"
         )
+        return [sys.executable, "-c", program]
+
+    def test_run_before_snapshot(self):
+        test_sys = TestSys(["report_new_linter_errors.py", "run", profile_name])
         with self.assertRaises(SystemExit) as cm:
             main(env, cast(Sys, test_sys))
         self.assertEqual(EXIT_CODE_NO_SNAPSHOT_FILE, cm.exception.code)
-        self.assertEqual(
-            [
-                "Snapshot file not found. Creating a new snapshot file.",
-                "Run this command later again to check if new errors are introduced.",
-            ],
-            test_sys.stderr.getvalue().splitlines()[-2:],
-        )
-        with open(snapshot_path) as snapshot:
-            self.assertEqual(
-                example_linter.original_output,
-                list(map(str.rstrip, snapshot.readlines())),
-                "snapshot file is created",
-            )
 
-    def test_new_errors_found(self):
+    def test_snapshot_creates_snapshot_commit_and_command(self):
+        test_env = env | {
+            "STUB_GIT_HEAD_COMMIT": "deadbeef",
+            "LINTER_LINES": "file1.py:1: error: a\nfile2.py:2: error: b\n",
+        }
         test_sys = TestSys(
             [
                 "report_new_linter_errors.py",
-                sys.executable,
-                "example_linter.py",
-                "new_errors",
+                "snapshot",
+                profile_name,
+                *self._py_linter_cmd(),
+                "--",
+                "file1.py",
+                "file2.py",
             ]
         )
+        main(test_env, cast(Sys, test_sys))
+        self.assertTrue(os.path.exists(snapshot_path))
+        self.assertTrue(os.path.exists(commit_path))
+        self.assertTrue(os.path.exists(command_path))
+        with open(snapshot_path) as snapshot:
+            self.assertEqual(
+                ["file1.py:1: error: a", "file2.py:2: error: b"],
+                list(map(str.rstrip, snapshot.readlines())),
+            )
+        with open(commit_path) as f:
+            self.assertEqual("deadbeef", f.read().strip())
+
+    def test_run_with_new_errors_does_not_update_snapshot(self):
+        # First create snapshot.
+        test_env1 = env | {
+            "STUB_GIT_HEAD_COMMIT": "deadbeef",
+            "LINTER_LINES": "file1.py:1: error: a\n",
+        }
+        test_sys1 = TestSys(
+            [
+                "report_new_linter_errors.py",
+                "snapshot",
+                profile_name,
+                *self._py_linter_cmd(),
+                "--",
+                "file1.py",
+            ]
+        )
+        main(test_env1, cast(Sys, test_sys1))
+        with open(snapshot_path) as f:
+            snapshot_before = f.read()
+
+        # Now run with a new error while file1.py is "changed".
+        test_env2 = env | {
+            "STUB_GIT_CHANGED_FILES": "file1.py\n",
+            "STUB_GIT_UNIFIED_DIFF": "",
+            "LINTER_LINES": "file1.py:1: error: a\nfile1.py:3: error: NEW\n",
+        }
+        test_sys2 = TestSys(["report_new_linter_errors.py", "run", profile_name])
         with self.assertRaises(SystemExit) as cm:
-            main(env, cast(Sys, test_sys))
-        self.assertEqual(cm.exception.code, 1)
-        self.assertEqual(
-            "ERROR: diff command reported that the command may have produced new errors. Fix it or update the snapshot.",
-            test_sys.stderr.getvalue().splitlines()[-1],
-        )
-        with open(snapshot_path) as snapshot:
-            self.assertEqual(
-                example_linter.new_errors_output,
-                list(map(str.rstrip, snapshot.readlines())),
-                "snapshot file is updated",
-            )
-
-    def test_fewer_errors_found(self):
-        test_sys = TestSys(
-            [
-                "report_new_linter_errors.py",
-                sys.executable,
-                "example_linter.py",
-                "fewer_errors",
-            ]
-        )
-        main(env, cast(Sys, test_sys))
-        self.assertEqual(
-            test_sys.stderr.getvalue(),
-            "",
-            "No error message is printed to stderr",
-        )
-        self.assertEqual(
-            [
-                "Congratulations! It looks like that you fixed some errors.",
-                "Saving the new snapshot.",
-            ],
-            list(map(str.rstrip, test_sys.stdout.getvalue().splitlines()))[-2:],
-            "stdout contains the message to praise the user",
-        )
-        with open(snapshot_path) as snapshot:
-            self.assertEqual(
-                example_linter.fewer_errors_output,
-                list(map(str.rstrip, snapshot.readlines())),
-                "snapshot file is updated with the new output",
-            )
-
-    def test_when_no_changes(self):
-        test_sys = TestSys(
-            [
-                "report_new_linter_errors.py",
-                sys.executable,
-                "example_linter.py",
-                "setUp",
-            ]
-        )
-        main(env, cast(Sys, test_sys))
-        self.assertEqual(
-            "",
-            test_sys.stderr.getvalue(),
-            "No error message is printed to stderr",
-        )
-        self.assertNotRegex(
-            test_sys.stdout.getvalue().rstrip(),
-            r"Congratulations! It looks like that you fixed some errors",
-            "No message to praise the user is printed to stdout",
-        )
-        with open(snapshot_path) as snapshot:
-            self.assertEqual(
-                list(map(str.rstrip, snapshot.readlines())),
-                example_linter.original_output,
-                "snapshot file is NOT updated",
-            )
-
-    def test_when_removed_and_added(self):
-        test_sys = TestSys(
-            [
-                "report_new_linter_errors.py",
-                sys.executable,
-                "example_linter.py",
-                "removed_and_added",
-            ]
-        )
-        with self.assertRaises(SystemExit) as cm:
-            main(env, cast(Sys, test_sys))
+            main(test_env2, cast(Sys, test_sys2))
         self.assertEqual(1, cm.exception.code)
-        self.assertEqual(
-            "ERROR: diff command reported that the command may have produced new errors. Fix it or update the snapshot.",
-            test_sys.stderr.getvalue().splitlines()[-1],
-        )
-        self.assertIn(
-            "Congratulations! It looks like that you fixed some errors.",
-            list(map(str.rstrip, test_sys.stdout.getvalue().splitlines())),
-            "stdout contains the new output",
-        )
-        with open(snapshot_path) as snapshot:
+        self.assertIn("file1.py:3: error: NEW", test_sys2.stderr.getvalue())
+        with open(snapshot_path) as f:
             self.assertEqual(
-                example_linter.removed_and_added_output,
-                list(map(str.rstrip, snapshot.readlines())),
-                "snapshot file is updated",
+                snapshot_before,
+                f.read(),
+                "snapshot must not change on run",
             )
+
+    def test_run_with_no_new_errors_exits_0_and_snapshot_unchanged(self):
+        test_env1 = env | {
+            "STUB_GIT_HEAD_COMMIT": "deadbeef",
+            "LINTER_LINES": "file1.py:1: error: a\n",
+        }
+        test_sys1 = TestSys(
+            [
+                "report_new_linter_errors.py",
+                "snapshot",
+                profile_name,
+                *self._py_linter_cmd(),
+                "--",
+                "file1.py",
+            ]
+        )
+        main(test_env1, cast(Sys, test_sys1))
+        with open(snapshot_path) as f:
+            snapshot_before = f.read()
+
+        test_env2 = env | {
+            "STUB_GIT_CHANGED_FILES": "file1.py\n",
+            "STUB_GIT_UNIFIED_DIFF": "",
+            "LINTER_LINES": "file1.py:1: error: a\n",
+        }
+        test_sys2 = TestSys(["report_new_linter_errors.py", "run", profile_name])
+        main(test_env2, cast(Sys, test_sys2))
+        self.assertEqual("", test_sys2.stderr.getvalue())
+        with open(snapshot_path) as f:
+            self.assertEqual(
+                snapshot_before,
+                f.read(),
+                "snapshot must not change on run",
+            )
+
+    def test_run_when_no_changed_files_exits_0(self):
+        test_env1 = env | {
+            "STUB_GIT_HEAD_COMMIT": "deadbeef",
+            "LINTER_LINES": "file1.py:1: error: a\n",
+        }
+        test_sys1 = TestSys(
+            [
+                "report_new_linter_errors.py",
+                "snapshot",
+                profile_name,
+                *self._py_linter_cmd(),
+                "--",
+                "file1.py",
+            ]
+        )
+        main(test_env1, cast(Sys, test_sys1))
+        with open(snapshot_path) as f:
+            snapshot_before = f.read()
+
+        test_env2 = env | {
+            "STUB_GIT_CHANGED_FILES": "",
+            "STUB_GIT_UNIFIED_DIFF": "",
+            "LINTER_LINES": "file1.py:1: error: a\n",
+        }
+        test_sys2 = TestSys(["report_new_linter_errors.py", "run", profile_name])
+        main(test_env2, cast(Sys, test_sys2))
+        with open(snapshot_path) as f:
+            self.assertEqual(snapshot_before, f.read())
+
+    def test_usage_error_when_missing_args(self):
+        test_sys = TestSys(["report_new_linter_errors.py"])
+        with self.assertRaises(SystemExit) as cm:
+            main(env, cast(Sys, test_sys))
+        self.assertEqual(EXIT_CODE_USAGE, cm.exception.code)
 
 
 class AdjustLineNumbersTestCase(unittest.TestCase):

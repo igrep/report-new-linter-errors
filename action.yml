@@ -38,10 +38,16 @@ runs:
     run: |
       git config --global user.name "$USERNAME"
       git config --global user.email "$EMAIL"
-      git fetch origin "$(cat .report-new-linter-errors/commit)" || true
+      if [ -f .report-new-linter-errors/default/commit ]; then
+        git fetch origin "$(cat .report-new-linter-errors/default/commit)" || true
+      fi
       set +e # Keep going even if the command fails, so we can commit the new snapshot
-      ./report-new-linter-errors ${{ inputs.command }}
+      # Run checks against an existing snapshot.
+      ./report-new-linter-errors run default
       exit_code=$?
+
+      # Always refresh snapshot content and anchor commit for next runs.
+      ./report-new-linter-errors snapshot default ${{ inputs.command }} -- .
       if [ "${{ inputs.snapshot_storage }}" = "commit" ]; then
         git add .report-new-linter-errors/
         git commit -m "Update report-new-linter-errors snapshot"
