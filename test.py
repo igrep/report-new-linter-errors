@@ -100,6 +100,26 @@ class MainTestCase(unittest.TestCase):
         with open(commit_path) as f:
             self.assertEqual("deadbeef", f.read().strip())
 
+    def test_snapshot_without_separator_is_allowed(self):
+        test_env = env | {
+            "STUB_GIT_HEAD_COMMIT": "deadbeef",
+            "LINTER_LINES": "file1.py:1: error: a\n",
+        }
+        test_sys = TestSys(
+            [
+                "report_new_linter_errors.py",
+                "snapshot",
+                profile_name,
+                *self._py_linter_cmd(),
+            ]
+        )
+        main(test_env, cast(Sys, test_sys))
+        with open(snapshot_path) as snapshot:
+            self.assertEqual(
+                ["file1.py:1: error: a"],
+                list(map(str.rstrip, snapshot.readlines())),
+            )
+
     def test_run_with_new_errors_does_not_update_snapshot(self):
         # First create snapshot.
         test_env1 = env | {

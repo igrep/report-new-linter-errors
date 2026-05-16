@@ -43,6 +43,41 @@ EXIT_CODE_NO_SNAPSHOT_FILE = 66
 EXIT_CODE_USAGE = 64
 
 
+@dataclass(frozen=True)
+class CommandConfig:
+    cmd_prefix: list[str]
+    use_separator: bool
+
+    def to_json_obj(self) -> dict[str, object]:
+        return {
+            "cmd_prefix": self.cmd_prefix,
+            "use_separator": self.use_separator,
+        }
+
+    @classmethod
+    def from_json_obj(cls, obj: object) -> "CommandConfig":
+        # Backward compatibility with older snapshots (stored as a JSON array).
+        if isinstance(obj, list):
+            if not all(isinstance(x, str) for x in obj):
+                raise ValueError("command.json must be a JSON array of strings")
+            return cls(cmd_prefix=cast(list[str], obj), use_separator=True)
+
+        if not isinstance(obj, dict):
+            raise ValueError("command.json must be a JSON object")
+
+        cmd_prefix = obj.get("cmd_prefix")
+        use_separator = obj.get("use_separator")
+
+        if not isinstance(cmd_prefix, list) or not all(
+            isinstance(x, str) for x in cmd_prefix
+        ):
+            raise ValueError("command.json cmd_prefix must be an array of strings")
+        if not isinstance(use_separator, bool):
+            raise ValueError("command.json use_separator must be a boolean")
+
+        return cls(cmd_prefix=cast(list[str], cmd_prefix), use_separator=use_separator)
+
+
 class Environ(Protocol):
     def get(self, key: str, default: str) -> str: ...
 
@@ -73,25 +108,24 @@ def main(environ: Environ, sys: Sys) -> None:
     subcommand = argv[0]
     env_dict = dict(cast(Any, environ))
     if subcommand == "snapshot":
-        if len(argv) < 4:
+        if len(argv) < 3:
             print(
-                "Usage: report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] -- [targets...]",
+                "Usage: report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] [-- [targets...]]",
                 file=cast(Any, sys.stderr),
             )
             sys.exit(EXIT_CODE_USAGE)
 
         profile_name = argv[1]
         rest = argv[2:]
-        try:
+        use_separator = False
+        if "--" in rest:
             sep_index = rest.index("--")
-        except ValueError:
-            print(
-                "ERROR: missing '--' separator between linter command and targets",
-                file=cast(Any, sys.stderr),
-            )
-            sys.exit(EXIT_CODE_USAGE)
-        cmd_prefix = rest[:sep_index]
-        targets = rest[sep_index + 1 :]
+            cmd_prefix = rest[:sep_index]
+            targets = rest[sep_index + 1 :]
+            use_separator = True
+        else:
+            cmd_prefix = rest
+            targets = []
         if not cmd_prefix:
             print(
                 "ERROR: missing linter command",
@@ -101,15 +135,22 @@ def main(environ: Environ, sys: Sys) -> None:
 
         snapshot_dir = SnapshotDirectory.from_environ(environ, profile_name)
         new_snapshot_path = snapshot_dir.get_new_snapshot_path()
+        snapshot_cmd = list(cmd_prefix)
+        if use_separator:
+            snapshot_cmd.extend(["--", *targets])
+        elif targets:
+            snapshot_cmd.extend(targets)
         _run_command_to_snapshot(
-            cmd=cmd_prefix + ["--", *targets],
+            cmd=snapshot_cmd,
             snapshot_path=new_snapshot_path,
             sys_stdout=sys.stdout,
             env=env_dict,
         )
         shutil.copy(new_snapshot_path, snapshot_dir.get_snapshot_path())
         save_current_commit(environ, snapshot_dir, env_dict=env_dict)
-        snapshot_dir.save_command_prefix(cmd_prefix)
+        snapshot_dir.save_command_config(
+            CommandConfig(cmd_prefix=cmd_prefix, use_separator=use_separator)
+        )
         return
 
     if subcommand == "run":
@@ -163,10 +204,14 @@ def main(environ: Environ, sys: Sys) -> None:
         if not changed_files:
             return
 
-        cmd_prefix = snapshot_dir.load_command_prefix()
+        command_config = snapshot_dir.load_command_config()
         new_snapshot_path = snapshot_dir.get_new_snapshot_path()
+        run_cmd = list(command_config.cmd_prefix)
+        if command_config.use_separator:
+            run_cmd.append("--")
+        run_cmd.extend(changed_files)
         _run_command_to_snapshot(
-            cmd=cmd_prefix + ["--", *changed_files],
+            cmd=run_cmd,
             snapshot_path=new_snapshot_path,
             sys_stdout=sys.stdout,
             env=env_dict,
@@ -305,20 +350,16 @@ class SnapshotDirectory:
         with open(commit_path, "w") as f:
             f.write(commit)
 
-    def save_command_prefix(self, cmd_prefix: list[str]) -> None:
+    def save_command_config(self, config: CommandConfig) -> None:
         command_path = self.get_command_path()
         with open(command_path, "w") as f:
-            json.dump(cmd_prefix, f)
+            json.dump(config.to_json_obj(), f)
 
-    def load_command_prefix(self) -> list[str]:
+    def load_command_config(self) -> CommandConfig:
         command_path = self.get_command_path()
         with open(command_path, "r") as f:
             contents = json.load(f)
-        if not isinstance(contents, list) or not all(
-            isinstance(x, str) for x in contents
-        ):
-            raise ValueError("command.json must be a JSON array of strings")
-        return cast(list[str], contents)
+        return CommandConfig.from_json_obj(contents)
 
 
 def adjust_line_numbers_in_snapshot(
