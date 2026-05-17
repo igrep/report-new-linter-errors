@@ -2,7 +2,7 @@
 
 """
 ```
-$ report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] -- [target_files_or_directories...]
+$ report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] [-- [target_files_or_directories...]]
 ```
 
 Create a profile named `profile_name` by running the `linter_command` with
@@ -99,9 +99,9 @@ def main(environ: Environ, sys: Sys) -> None:
     argv = sys.argv[1:]
     if not argv:
         print(
-            "Usage: report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] -- [targets...]\n"
+            "Usage: report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] [-- [targets...]]\n"
             "       report-new-linter-errors run <profile_name>",
-            file=cast(Any, sys.stderr),
+            file=sys.stderr,
         )
         sys.exit(EXIT_CODE_USAGE)
 
@@ -111,7 +111,7 @@ def main(environ: Environ, sys: Sys) -> None:
         if len(argv) < 3:
             print(
                 "Usage: report-new-linter-errors snapshot <profile_name> <linter_command> [linter_options...] [-- [targets...]]",
-                file=cast(Any, sys.stderr),
+                file=sys.stderr,
             )
             sys.exit(EXIT_CODE_USAGE)
 
@@ -129,7 +129,7 @@ def main(environ: Environ, sys: Sys) -> None:
         if not cmd_prefix:
             print(
                 "ERROR: missing linter command",
-                file=cast(Any, sys.stderr),
+                file=sys.stderr,
             )
             sys.exit(EXIT_CODE_USAGE)
 
@@ -170,14 +170,14 @@ def main(environ: Environ, sys: Sys) -> None:
         if not os.path.exists(snapshot_path) or not os.path.exists(commit_path):
             print(
                 f"Snapshot for profile '{profile_name}' not found. Run: report-new-linter-errors snapshot {profile_name} ...",
-                file=cast(Any, sys.stderr),
+                file=sys.stderr,
             )
             sys.exit(EXIT_CODE_NO_SNAPSHOT_FILE)
 
         if not os.path.exists(command_path):
             print(
                 f"ERROR: Missing command.json for profile '{profile_name}'. Recreate the snapshot.",
-                file=cast(Any, sys.stderr),
+                file=sys.stderr,
             )
             sys.exit(EXIT_CODE_USAGE)
 
@@ -185,7 +185,7 @@ def main(environ: Environ, sys: Sys) -> None:
         if snapshot_commit is None:
             print(
                 f"Snapshot for profile '{profile_name}' is missing commit anchor. Recreate the snapshot.",
-                file=cast(Any, sys.stderr),
+                file=sys.stderr,
             )
             sys.exit(EXIT_CODE_NO_SNAPSHOT_FILE)
 
@@ -260,20 +260,20 @@ def main(environ: Environ, sys: Sys) -> None:
         if removed_errors:
             print(
                 "Congratulations! It looks like that you fixed some errors.",
-                file=cast(Any, sys.stdout),
+                file=sys.stdout,
             )
 
         if new_errors:
             print(
                 "ERROR: linter reported new errors in changed files. Fix it or update the snapshot.",
-                file=cast(Any, sys.stderr),
+                file=sys.stderr,
             )
             sys.exit(1)
         return
 
     print(
         f"Unknown subcommand: {subcommand}",
-        file=cast(Any, sys.stderr),
+        file=sys.stderr,
     )
     sys.exit(EXIT_CODE_USAGE)
 
