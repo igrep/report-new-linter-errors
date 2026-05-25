@@ -121,8 +121,8 @@ class MainTestCase(unittest.TestCase):
             )
 
     def test_snapshot_rejects_invalid_profile_name(self):
-        for invalid_profile_name in ("../escape", "dir/name", "..", "/tmp/escape"):
-            with self.subTest(profile_name=invalid_profile_name):
+        for invalid_name in ("../escape", "dir/name", "..", "/tmp/escape"):
+            with self.subTest(invalid_name=invalid_name):
                 test_env = env | {
                     "STUB_GIT_HEAD_COMMIT": "deadbeef",
                     "LINTER_LINES": "file1.py:1: error: a\n",
@@ -131,7 +131,7 @@ class MainTestCase(unittest.TestCase):
                     [
                         "report_new_linter_errors.py",
                         "snapshot",
-                        invalid_profile_name,
+                        invalid_name,
                         *self._py_linter_cmd(),
                     ]
                 )
