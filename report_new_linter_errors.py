@@ -208,16 +208,25 @@ def main(environ: Environ, sys: Sys) -> None:
             sys.exit(EXIT_CODE_NO_SNAPSHOT_FILE)
 
         git_command = environ.get("REPORT_NEW_LINTER_ERROR_GIT_COMMAND", "git")
-        changed_files = subprocess.check_output(
-            [
-                git_command,
-                "diff",
-                "--name-only",
-                f"{snapshot_commit}..HEAD",
-            ],
-            text=True,
-            env=env_dict,
-        ).splitlines()
+        try:
+            changed_files = subprocess.check_output(
+                [
+                    git_command,
+                    "diff",
+                    "--name-only",
+                    f"{snapshot_commit}..HEAD",
+                ],
+                text=True,
+                env=env_dict,
+            ).splitlines()
+        except subprocess.CalledProcessError as e:
+            print(
+                f"ERROR: Failed to run `git diff` with commit {snapshot_commit!r} (exit code {e.returncode}). "
+                f"The commit may not be available locally (e.g. in a shallow clone). "
+                f"Try running `git fetch --unshallow` or `git fetch origin {snapshot_commit}` and retry.",
+                file=sys.stderr,
+            )
+            sys.exit(EXIT_CODE_USAGE)
         changed_files = [p for p in changed_files if p.strip()]
         if not changed_files:
             return
