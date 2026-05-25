@@ -43,6 +43,18 @@ EXIT_CODE_NO_SNAPSHOT_FILE = 66
 EXIT_CODE_USAGE = 64
 
 
+def validate_profile_name(profile_name: str) -> None:
+    normalized = profile_name.replace("\\", "/")
+    if (
+        not profile_name
+        or os.path.isabs(profile_name)
+        or "/" in profile_name
+        or "\\" in profile_name
+        or any(part == ".." for part in normalized.split("/"))
+    ):
+        raise ValueError(f"invalid profile name: {profile_name}")
+
+
 @dataclass(frozen=True)
 class CommandConfig:
     cmd_prefix: list[str]
@@ -133,7 +145,11 @@ def main(environ: Environ, sys: Sys) -> None:
             )
             sys.exit(EXIT_CODE_USAGE)
 
-        snapshot_dir = SnapshotDirectory.from_environ(environ, profile_name)
+        try:
+            snapshot_dir = SnapshotDirectory.from_environ(environ, profile_name)
+        except ValueError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(EXIT_CODE_USAGE)
         new_snapshot_path = snapshot_dir.get_new_snapshot_path()
         snapshot_cmd = list(cmd_prefix)
         if use_separator:
@@ -160,7 +176,11 @@ def main(environ: Environ, sys: Sys) -> None:
             sys.exit(EXIT_CODE_USAGE)
 
         profile_name = argv[1]
-        snapshot_dir = SnapshotDirectory.from_environ(environ, profile_name)
+        try:
+            snapshot_dir = SnapshotDirectory.from_environ(environ, profile_name)
+        except ValueError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(EXIT_CODE_USAGE)
         snapshot_path = snapshot_dir.get_snapshot_path()
         commit_path = snapshot_dir.get_commit_path()
         command_path = snapshot_dir.get_command_path()
@@ -304,6 +324,7 @@ def _run_command_to_snapshot(
 
 class SnapshotDirectory:
     def __init__(self, root: str, profile_name: str):
+        validate_profile_name(profile_name)
         self.root = root
         self.profile_name = profile_name
         self.profile_root = os.path.join(root, profile_name)
@@ -314,6 +335,7 @@ class SnapshotDirectory:
             "REPORT_NEW_LINTER_ERROR_PATH",
             os.path.join(os.getcwd(), ".report-new-linter-errors"),
         )
+        validate_profile_name(profile_name)
         if not os.path.exists(root):
             os.makedirs(root)
         profile_root = os.path.join(root, profile_name)

@@ -120,6 +120,26 @@ class MainTestCase(unittest.TestCase):
                 list(map(str.rstrip, snapshot.readlines())),
             )
 
+    def test_snapshot_rejects_invalid_profile_name(self):
+        for invalid_profile_name in ("../escape", "dir/name", "..", "/tmp/escape"):
+            with self.subTest(profile_name=invalid_profile_name):
+                test_env = env | {
+                    "STUB_GIT_HEAD_COMMIT": "deadbeef",
+                    "LINTER_LINES": "file1.py:1: error: a\n",
+                }
+                test_sys = TestSys(
+                    [
+                        "report_new_linter_errors.py",
+                        "snapshot",
+                        invalid_profile_name,
+                        *self._py_linter_cmd(),
+                    ]
+                )
+                with self.assertRaises(SystemExit) as cm:
+                    main(test_env, cast(Sys, test_sys))
+                self.assertEqual(EXIT_CODE_USAGE, cm.exception.code)
+                self.assertIn("invalid profile name", test_sys.stderr.getvalue())
+
     def test_run_with_new_errors_does_not_update_snapshot(self):
         # First create snapshot.
         test_env1 = env | {
