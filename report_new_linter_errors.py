@@ -138,8 +138,6 @@ def main(environ: Environ, sys: Sys) -> None:
         snapshot_cmd = list(cmd_prefix)
         if use_separator:
             snapshot_cmd.extend(["--", *targets])
-        elif targets:
-            snapshot_cmd.extend(targets)
         _run_command_to_snapshot(
             cmd=snapshot_cmd,
             snapshot_path=new_snapshot_path,
