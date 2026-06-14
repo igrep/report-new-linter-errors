@@ -59,11 +59,19 @@ class MainTestCase(unittest.TestCase):
 
     def _py_linter_cmd(self) -> list[str]:
         # A tiny linter shim controlled by LINTER_LINES.
-        program = (
-            "import os; "
-            "print(os.environ.get('LINTER_LINES').rstrip('\\n')); "
-        )
+        program = "import os; print(os.environ.get('LINTER_LINES').rstrip('\\n')); "
         return [sys.executable, "-c", program]
+
+    def _test_sys_for_snapshot(self, rest_args: list[str]) -> TestSys:
+        return TestSys(
+            [
+                "report_new_linter_errors.py",
+                "snapshot",
+                profile_name,
+                *self._py_linter_cmd(),
+                *rest_args,
+            ]
+        )
 
     def test_run_before_snapshot(self):
         test_sys = TestSys(["report_new_linter_errors.py", "run", profile_name])
@@ -76,12 +84,8 @@ class MainTestCase(unittest.TestCase):
             "STUB_GIT_HEAD_COMMIT": "deadbeef",
             "LINTER_LINES": "file1.py:1: error: a\nfile2.py:2: error: b\n",
         }
-        test_sys = TestSys(
+        test_sys = self._test_sys_for_snapshot(
             [
-                "report_new_linter_errors.py",
-                "snapshot",
-                profile_name,
-                *self._py_linter_cmd(),
                 "--",
                 "file1.py",
                 "file2.py",
@@ -104,14 +108,7 @@ class MainTestCase(unittest.TestCase):
             "STUB_GIT_HEAD_COMMIT": "deadbeef",
             "LINTER_LINES": "file1.py:1: error: a\n",
         }
-        test_sys = TestSys(
-            [
-                "report_new_linter_errors.py",
-                "snapshot",
-                profile_name,
-                *self._py_linter_cmd(),
-            ]
-        )
+        test_sys = self._test_sys_for_snapshot([])
         main(test_env, cast(Sys, test_sys))
         with open(snapshot_path) as snapshot:
             self.assertEqual(
@@ -145,12 +142,8 @@ class MainTestCase(unittest.TestCase):
             "STUB_GIT_HEAD_COMMIT": "deadbeef",
             "LINTER_LINES": "file1.py:1: error: a\n",
         }
-        test_sys1 = TestSys(
+        test_sys1 = self._test_sys_for_snapshot(
             [
-                "report_new_linter_errors.py",
-                "snapshot",
-                profile_name,
-                *self._py_linter_cmd(),
                 "--",
                 "file1.py",
             ]
@@ -182,12 +175,8 @@ class MainTestCase(unittest.TestCase):
             "STUB_GIT_HEAD_COMMIT": "deadbeef",
             "LINTER_LINES": "file1.py:1: error: a\n",
         }
-        test_sys1 = TestSys(
+        test_sys1 = self._test_sys_for_snapshot(
             [
-                "report_new_linter_errors.py",
-                "snapshot",
-                profile_name,
-                *self._py_linter_cmd(),
                 "--",
                 "file1.py",
             ]
@@ -216,12 +205,8 @@ class MainTestCase(unittest.TestCase):
             "STUB_GIT_HEAD_COMMIT": "deadbeef",
             "LINTER_LINES": "file1.py:1: error: a\n",
         }
-        test_sys1 = TestSys(
+        test_sys1 = self._test_sys_for_snapshot(
             [
-                "report_new_linter_errors.py",
-                "snapshot",
-                profile_name,
-                *self._py_linter_cmd(),
                 "--",
                 "file1.py",
             ]
