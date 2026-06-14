@@ -391,29 +391,6 @@ class SnapshotDirectory:
         return CommandConfig.from_json_obj(contents)
 
 
-def adjust_line_numbers_in_snapshot(
-    environ: Environ,
-    snapshot_dir: SnapshotDirectory,
-) -> None:
-    current_commit = snapshot_dir.get_current_commit()
-    if current_commit is None:
-        return
-    git_command = environ.get("REPORT_NEW_LINTER_ERROR_GIT_COMMAND", "git")
-    linted_files_diff = subprocess.check_output(
-        [git_command, "diff", "--unified", f"{current_commit}..HEAD"],
-        text=True,
-        env=dict(cast(Any, environ)),
-    ).splitlines(keepends=True)
-    with open(snapshot_dir.get_snapshot_path(), "r") as f:
-        snapshot_lines = f.readlines()
-        adjusted_snapshot_lines = adjust_line_numbers(
-            iter_diff_lines=iter(linted_files_diff),
-            iter_snapshot_lines=iter(snapshot_lines),
-        )
-    with open(snapshot_dir.get_snapshot_path(), "w") as f:
-        f.writelines("\n".join(adjusted_snapshot_lines) + "\n")
-
-
 def save_current_commit(
     environ: Environ,
     snapshot_dir: SnapshotDirectory,
