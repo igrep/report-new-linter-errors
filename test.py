@@ -61,8 +61,7 @@ class MainTestCase(unittest.TestCase):
         # A tiny linter shim controlled by LINTER_LINES.
         program = (
             "import os; "
-            "lines=os.environ.get('LINTER_LINES','').splitlines(); "
-            "[print(l) for l in lines if l!='']"
+            "print(os.environ.get('LINTER_LINES').rstrip('\\n')); "
         )
         return [sys.executable, "-c", program]
 
