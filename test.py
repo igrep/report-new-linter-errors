@@ -62,6 +62,12 @@ class MainTestCase(unittest.TestCase):
         program = "import os; print(os.environ.get('LINTER_LINES').rstrip('\\n')); "
         return [sys.executable, "-c", program]
 
+    def _test_env_for_snapshot(self, lines: list[str]) -> dict[str, str]:
+        return env | {
+            "STUB_GIT_HEAD_COMMIT": "deadbeef",
+            "LINTER_LINES": "\n".join(lines) + "\n",
+        }
+
     def _test_sys_for_snapshot(self, rest_args: list[str]) -> TestSys:
         return TestSys(
             [
@@ -80,17 +86,10 @@ class MainTestCase(unittest.TestCase):
         self.assertEqual(EXIT_CODE_NO_SNAPSHOT_FILE, cm.exception.code)
 
     def test_snapshot_creates_snapshot_commit_and_command(self):
-        test_env = env | {
-            "STUB_GIT_HEAD_COMMIT": "deadbeef",
-            "LINTER_LINES": "file1.py:1: error: a\nfile2.py:2: error: b\n",
-        }
-        test_sys = self._test_sys_for_snapshot(
-            [
-                "--",
-                "file1.py",
-                "file2.py",
-            ]
+        test_env = self._test_env_for_snapshot(
+            ["file1.py:1: error: a", "file2.py:2: error: b"]
         )
+        test_sys = self._test_sys_for_snapshot(["--", "file1.py", "file2.py"])
         main(test_env, cast(Sys, test_sys))
         self.assertTrue(os.path.exists(snapshot_path))
         self.assertTrue(os.path.exists(commit_path))
@@ -104,10 +103,7 @@ class MainTestCase(unittest.TestCase):
             self.assertEqual("deadbeef", f.read().strip())
 
     def test_snapshot_without_separator_is_allowed(self):
-        test_env = env | {
-            "STUB_GIT_HEAD_COMMIT": "deadbeef",
-            "LINTER_LINES": "file1.py:1: error: a\n",
-        }
+        test_env = self._test_env_for_snapshot(["file1.py:1: error: a"])
         test_sys = self._test_sys_for_snapshot([])
         main(test_env, cast(Sys, test_sys))
         with open(snapshot_path) as snapshot:
@@ -119,10 +115,7 @@ class MainTestCase(unittest.TestCase):
     def test_snapshot_rejects_invalid_profile_name(self):
         for invalid_name in ("../escape", "dir/name", "..", "/tmp/escape"):
             with self.subTest(invalid_name=invalid_name):
-                test_env = env | {
-                    "STUB_GIT_HEAD_COMMIT": "deadbeef",
-                    "LINTER_LINES": "file1.py:1: error: a\n",
-                }
+                test_env = self._test_env_for_snapshot(["file1.py:1: error: a"])
                 test_sys = TestSys(
                     [
                         "report_new_linter_errors.py",
@@ -138,16 +131,8 @@ class MainTestCase(unittest.TestCase):
 
     def test_run_with_new_errors_does_not_update_snapshot(self):
         # First create snapshot.
-        test_env1 = env | {
-            "STUB_GIT_HEAD_COMMIT": "deadbeef",
-            "LINTER_LINES": "file1.py:1: error: a\n",
-        }
-        test_sys1 = self._test_sys_for_snapshot(
-            [
-                "--",
-                "file1.py",
-            ]
-        )
+        test_env1 = self._test_env_for_snapshot(["file1.py:1: error: a"])
+        test_sys1 = self._test_sys_for_snapshot(["--", "file1.py"])
         main(test_env1, cast(Sys, test_sys1))
         with open(snapshot_path) as f:
             snapshot_before = f.read()
@@ -171,16 +156,8 @@ class MainTestCase(unittest.TestCase):
             )
 
     def test_run_with_no_new_errors_exits_0_and_snapshot_unchanged(self):
-        test_env1 = env | {
-            "STUB_GIT_HEAD_COMMIT": "deadbeef",
-            "LINTER_LINES": "file1.py:1: error: a\n",
-        }
-        test_sys1 = self._test_sys_for_snapshot(
-            [
-                "--",
-                "file1.py",
-            ]
-        )
+        test_env1 = self._test_env_for_snapshot(["file1.py:1: error: a"])
+        test_sys1 = self._test_sys_for_snapshot(["--", "file1.py"])
         main(test_env1, cast(Sys, test_sys1))
         with open(snapshot_path) as f:
             snapshot_before = f.read()
@@ -201,16 +178,8 @@ class MainTestCase(unittest.TestCase):
             )
 
     def test_run_when_no_changed_files_exits_0(self):
-        test_env1 = env | {
-            "STUB_GIT_HEAD_COMMIT": "deadbeef",
-            "LINTER_LINES": "file1.py:1: error: a\n",
-        }
-        test_sys1 = self._test_sys_for_snapshot(
-            [
-                "--",
-                "file1.py",
-            ]
-        )
+        test_env1 = self._test_env_for_snapshot(["file1.py:1: error: a"])
+        test_sys1 = self._test_sys_for_snapshot(["--", "file1.py"])
         main(test_env1, cast(Sys, test_sys1))
         with open(snapshot_path) as f:
             snapshot_before = f.read()
