@@ -59,7 +59,14 @@ class MainTestCase(unittest.TestCase):
 
     def _py_linter_cmd(self) -> list[str]:
         # A tiny linter shim controlled by LINTER_LINES.
-        program = "import os; print(os.environ.get('LINTER_LINES').rstrip('\\n')); "
+        program = "; ".join(
+            [
+                "import os",
+                "import sys",
+                "print(os.environ.get('LINTER_LINES').rstrip('\\n'))",
+                "sys.exit(1)",
+            ]
+        )
         return [sys.executable, "-c", program]
 
     def _test_env_for_snapshot(self, lines: list[str]) -> dict[str, str]:
