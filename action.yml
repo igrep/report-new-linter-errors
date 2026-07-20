@@ -19,9 +19,9 @@ runs:
   - id: install
     shell: bash
     run: |
-      curl -L -o report-new-linter-errors https://github.com/igrep/report-new-linter-errors/releases/download/v0.0.5/report-new-linter-errors
+      curl -L -o report-new-linter-errors https://github.com/igrep/report-new-linter-errors/releases/download/v0.1.0/report-new-linter-errors
       chmod +x report-new-linter-errors
-      SHA256="5b2578ef5299a3ffaaa74eb1d5b7d87d9628e24f01e165e6f4fa9cf639b77d7e"
+      SHA256="3e638b52bf63ae2feb69bd4437f7c99ee34ad3ae9f8b32a998c4173d33998cd8"
       echo "$SHA256  report-new-linter-errors" | sha256sum -c -
   - id: restore-cache
     if: ${{ inputs.snapshot_storage == 'cache' }}
