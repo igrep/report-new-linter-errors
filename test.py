@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import unittest
@@ -108,6 +109,11 @@ class MainTestCase(unittest.TestCase):
             )
         with open(commit_path) as f:
             self.assertEqual("deadbeef", f.read().strip())
+        with open(command_path) as f:
+            self.assertEqual(
+                [*self._py_linter_cmd(), "--", "file1.py", "file2.py"],
+                json.load(f),
+            )
 
     def test_snapshot_without_separator_is_allowed(self):
         test_env = self._test_env_for_snapshot(["file1.py:1: error: a"])
@@ -161,6 +167,28 @@ class MainTestCase(unittest.TestCase):
                 f.read(),
                 "snapshot must not change on run",
             )
+
+    def test_run_compares_errors_in_files_not_changed(self):
+        test_env1 = self._test_env_for_snapshot(
+            ["file1.py:1: error: a", "file2.py:1: error: b"]
+        )
+        test_sys1 = self._test_sys_for_snapshot([])
+        main(test_env1, cast(Sys, test_sys1))
+
+        # Only file1.py is changed, but the change causes a new error in file2.py.
+        test_env2 = env | {
+            "STUB_GIT_CHANGED_FILES": "file1.py\n",
+            "STUB_GIT_UNIFIED_DIFF": "",
+            "LINTER_LINES": "file1.py:1: error: a\nfile2.py:1: error: b\nfile2.py:2: error: NEW\n",
+        }
+        test_sys2 = TestSys(["report_new_linter_errors.py", "run", profile_name])
+        with self.assertRaises(SystemExit) as cm:
+            main(test_env2, cast(Sys, test_sys2))
+        self.assertEqual(1, cm.exception.code)
+        stderr = test_sys2.stderr.getvalue()
+        self.assertIn("file2.py:2: error: NEW", stderr)
+        self.assertNotIn("file2.py:1: error: b", stderr)
+        self.assertNotIn("file1.py:1: error: a", stderr)
 
     def test_run_with_no_new_errors_exits_0_and_snapshot_unchanged(self):
         test_env1 = self._test_env_for_snapshot(["file1.py:1: error: a"])
