@@ -152,7 +152,6 @@ class MainTestCase(unittest.TestCase):
 
         # Now run with a new error while file1.py is "changed".
         test_env2 = env | {
-            "STUB_GIT_CHANGED_FILES": "file1.py\n",
             "STUB_GIT_UNIFIED_DIFF": "",
             "LINTER_LINES": "file1.py:1: error: a\nfile1.py:3: error: NEW\n",
         }
@@ -177,7 +176,6 @@ class MainTestCase(unittest.TestCase):
 
         # Only file1.py is changed, but the change causes a new error in file2.py.
         test_env2 = env | {
-            "STUB_GIT_CHANGED_FILES": "file1.py\n",
             "STUB_GIT_UNIFIED_DIFF": "",
             "LINTER_LINES": "file1.py:1: error: a\nfile2.py:1: error: b\nfile2.py:2: error: NEW\n",
         }
@@ -198,7 +196,6 @@ class MainTestCase(unittest.TestCase):
             snapshot_before = f.read()
 
         test_env2 = env | {
-            "STUB_GIT_CHANGED_FILES": "file1.py\n",
             "STUB_GIT_UNIFIED_DIFF": "",
             "LINTER_LINES": "file1.py:1: error: a\n",
         }
@@ -220,7 +217,6 @@ class MainTestCase(unittest.TestCase):
             snapshot_before = f.read()
 
         test_env2 = env | {
-            "STUB_GIT_CHANGED_FILES": "",
             "STUB_GIT_UNIFIED_DIFF": "",
             "LINTER_LINES": "file1.py:1: error: a\n",
         }
@@ -228,6 +224,25 @@ class MainTestCase(unittest.TestCase):
         main(test_env2, cast(Sys, test_sys2))
         with open(snapshot_path) as f:
             self.assertEqual(snapshot_before, f.read())
+
+    def test_run_when_no_changed_files_reports_new_errors(self):
+        test_env1 = self._test_env_for_snapshot(["file1.py:1: error: a"])
+        test_sys1 = self._test_sys_for_snapshot(["--", "file1.py"])
+        main(test_env1, cast(Sys, test_sys1))
+
+        # No committed changes, but e.g. uncommitted edits or updated
+        # dependencies cause a new error.
+        test_env2 = env | {
+            "STUB_GIT_UNIFIED_DIFF": "",
+            "LINTER_LINES": "file1.py:1: error: a\nfile1.py:2: error: NEW\n",
+        }
+        test_sys2 = TestSys(["report_new_linter_errors.py", "run", profile_name])
+        with self.assertRaises(SystemExit) as cm:
+            main(test_env2, cast(Sys, test_sys2))
+        self.assertEqual(1, cm.exception.code)
+        stderr = test_sys2.stderr.getvalue()
+        self.assertIn("file1.py:2: error: NEW", stderr)
+        self.assertNotIn("file1.py:1: error: a", stderr)
 
     def test_usage_error_when_missing_args(self):
         test_sys = TestSys(["report_new_linter_errors.py"])
