@@ -17,17 +17,17 @@ command as the `snapshot` subcommand and comparing its entire output with the
 snapshot (after adjusting the snapshot's line numbers by `git diff`).
 """
 
+import json
 import os
 import re
 import shutil
 import subprocess
-import json
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass
 from itertools import accumulate
 from pathlib import PurePath
-from typing import Protocol, TextIO, Any, cast, Iterator, Literal, Optional, Union, IO
-
+from typing import IO, Any, Literal, Protocol, TextIO, Union, cast
 
 # https://stackoverflow.com/questions/1101957/are-there-any-standard-exit-status-codes-in-linux
 EXIT_CODE_NO_SNAPSHOT_FILE = 66
@@ -207,7 +207,7 @@ def main(environ: Environ, sys: Sys) -> None:
             if isinstance(sl, SnapshotEntry)
         }
         with open(new_snapshot_path, "r") as f:
-            new_snapshot_lines = [line.rstrip("\n") for line in f.readlines()]
+            new_snapshot_lines = [line.rstrip("\n") for line in f]
         new_entries = {
             sl
             for sl in parse_snapshot_lines(iter(new_snapshot_lines))
@@ -305,7 +305,7 @@ class SnapshotDirectory:
     def get_command_path(self) -> str:
         return os.path.join(self.profile_root, "command.json")
 
-    def get_current_commit(self) -> Optional[str]:
+    def get_current_commit(self) -> str | None:
         commit_path = self.get_commit_path()
         if not os.path.exists(commit_path):
             return None
@@ -337,7 +337,7 @@ def save_current_commit(
     environ: Environ,
     snapshot_dir: SnapshotDirectory,
     *,
-    env_dict: Optional[dict[str, str]] = None,
+    env_dict: dict[str, str] | None = None,
 ) -> None:
     git_command = environ.get("REPORT_NEW_LINTER_ERROR_GIT_COMMAND", "git")
     new_commit = subprocess.check_output(
@@ -444,7 +444,7 @@ class AdjustmentTable:
 
 
 class CollectedSnapshotEntries:
-    _snapshot_lines: list[Optional[SnapshotLine]]  # None if deleted
+    _snapshot_lines: list[SnapshotLine | None]  # None if deleted
     _index: defaultdict[
         PurePath,  # path
         dict[
@@ -455,7 +455,7 @@ class CollectedSnapshotEntries:
 
     def __init__(self, iter_snapshot_lines: Iterator[str]) -> None:
         self._snapshot_lines = []
-        self._index = defaultdict(lambda: {})
+        self._index = defaultdict(dict)
         for i, line in enumerate(parse_snapshot_lines(iter_snapshot_lines)):
             self._snapshot_lines.append(line)
             if isinstance(line, SnapshotEntry):
@@ -470,7 +470,7 @@ class CollectedSnapshotEntries:
         self,
         path_minus: PurePath,
         line_number: int,
-    ) -> Optional[SnapshotEntry]:
+    ) -> SnapshotEntry | None:
         line_index = self._index.get(
             path_minus,
             {},
@@ -626,9 +626,9 @@ def parse_diff_current_initial_line_number(line: str) -> int:
 def parse_git_diff_hunks(
     iter_diff_lines: Iterator[str],
 ) -> Iterator[GitDiffHunk]:
-    current_path_minus: Optional[PurePath] = None
-    current_path_plus: Optional[PurePath] = None
-    current_initial_line_number: Optional[int] = None
+    current_path_minus: PurePath | None = None
+    current_path_plus: PurePath | None = None
+    current_initial_line_number: int | None = None
     current_diffs: list[DiffPayloadLine] = []
 
     is_empty = True

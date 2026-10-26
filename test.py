@@ -7,9 +7,9 @@ from pathlib import PurePath
 from typing import cast
 
 from report_new_linter_errors import (
-    DiffLine,
     EXIT_CODE_NO_SNAPSHOT_FILE,
     EXIT_CODE_USAGE,
+    DiffLine,
     GitDiffHunk,
     SnapshotEntry,
     Sys,
