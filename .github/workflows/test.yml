@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
-    - uses: astral-sh/ruff-action@v3
+    - uses: astral-sh/ruff-action@v4.1.0
       with: { args: '--version' }
     - run: ruff format --diff report_new_linter_errors.py test.py
     - run: ruff check --diff report_new_linter_errors.py test.py
