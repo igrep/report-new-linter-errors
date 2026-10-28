@@ -167,7 +167,8 @@ def main(environ: Environ, sys: Sys) -> None:
                     git_command,
                     "diff",
                     "--unified",
-                    snapshot_commit,
+                    # if snapshot_commit is None, it exits with EXIT_CODE_NO_SNAPSHOT_FILE above.
+                    cast(str, snapshot_commit),
                 ],
                 text=True,
                 env=env_dict,
