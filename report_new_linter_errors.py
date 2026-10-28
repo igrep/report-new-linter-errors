@@ -167,7 +167,7 @@ def main(environ: Environ, sys: Sys) -> None:
                     git_command,
                     "diff",
                     "--unified",
-                    f"{snapshot_commit}..HEAD",
+                    snapshot_commit,
                 ],
                 text=True,
                 env=env_dict,
